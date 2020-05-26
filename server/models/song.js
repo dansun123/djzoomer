@@ -9,6 +9,7 @@ const SongSchema = new mongoose.Schema({
   geniusID: String,
   songUrl: String,
   embedContent: String,
+  highScores: [{userId: String, userName: String, score: Number, lyrics: Array}]
 });
 
 // compile model from schema

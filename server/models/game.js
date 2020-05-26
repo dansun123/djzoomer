@@ -8,7 +8,7 @@ const GameSchema = new mongoose.Schema({
     userName: String,
     score: Number,
     lyrics: Array,
-    mode: String
+    mode: {type: String, default: "Typing"}
   }],
   roomID: String,
   status: String, // inProgress, timer, finished. ,

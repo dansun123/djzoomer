@@ -7,7 +7,7 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import TextField from "@material-ui/core/TextField";
 import Autocomplete from '@material-ui/lab/Autocomplete';
-
+import { socket } from "../../client-socket.js";
 import { get, post } from "../../utilities";
 
 
@@ -25,6 +25,11 @@ class SongQueue extends React.Component {
     componentDidMount() {
         get("/api/songs").then((songs) => {
             this.setState({songOptions: songs})
+        })
+        socket.on("finished", (data) => {
+            get("/api/songs").then((songs) => {
+                this.setState({songOptions: songs})
+            })
         })
     }
 
@@ -54,8 +59,8 @@ class SongQueue extends React.Component {
         <Grid container direction="row" style={{alignItems: "center", justifyContent: "center"}}>
         <Box width={"calc(100% - 80px)"}>
         <Autocomplete
-            options={this.state.songOptions}
-            getOptionLabel={(option) => {return option.title + " " + option.primaryArtist}}
+            options={this.state.songOptions.sort((a, b) => {return b.highScore - a.highScore})}
+            getOptionLabel={(option) => {return "(" + option.highScore + ") " + option.title + " " + option.primaryArtist}}
             fullWidth
             value={this.state.song}
             onChange={this.handleChange}

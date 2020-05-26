@@ -55,6 +55,7 @@ class Room extends Component {
             gameID: "",
             users: undefined,
             status: "waitingToFinish",
+            highScores: [],
             isLoading: true,
             endTime: new Date(),
             startTime: new Date(),
@@ -146,7 +147,7 @@ class Room extends Component {
 
         socket.on("finished", (data) => {
             if(this.state.roomID !== data.roomID) return;
-            this.setState({status: "finished", timeToStart: 3, gameData: data.gameData})
+            this.setState({status: "finished", timeToStart: 3, gameData: data.gameData, highScores: data.highScores})
             
                
             
@@ -161,6 +162,15 @@ class Room extends Component {
         socket.on("inactive", (data) => {
             if(data.userId === this.props.userId) {
                 this.setState({redirect: true})
+            }
+            else {
+                let newUsers  = this.state.users.filter((user) => {return user.userId !== data.userId})
+               
+                this.setState({
+                    users: newUsers,
+
+                })
+            
             }
         })
 
@@ -274,6 +284,8 @@ class Room extends Component {
             <h2 style={{display: "flex", justifyContent: "center"}}>Results</h2>
             <ScorePage gameData = {this.state.gameData} userId = {this.props.userId} />
             <Button fullWidth onClick={() => {post("/api/startGame", {roomID: this.state.roomID, song: this.state.queue[0]})}}>Start New Game</Button>
+            <h3 style={{display: "flex", justifyContent: "center"}}>High Scores</h3>
+            <ScorePage gameData = {this.state.highScores} userId = {this.props.userId} cutOff={5} />
             </>
 
         }
@@ -301,7 +313,7 @@ class Room extends Component {
                      {body}
                 </Box>
                 <Box width={"400px"} >
-                {this.state.status !== "inProgress" && this.state.status !== "timer" ? <Select
+                {/*{this.state.status !== "inProgress" && this.state.status !== "timer" ? <Select
           value={this.state.mode}
           fullWidth
           onChange={(event) => {
@@ -312,11 +324,11 @@ class Room extends Component {
         >
    
           {["Typing"].concat(instruments).map((instrument) =>{return <MenuItem value={instrument}>{instrument}</MenuItem>})}
-                </Select>:<></>}                
+            </Select>:<></>} */}               
 
                     {this.state.status === "inProgress" && window.AudioContext ? <Box style={{height: "260px", overflow: scroll}}>
                 <Music url = {this.state.songURL} visual={true}></Music>
-            </Box> : <SongQueue queue = {this.state.queue} roomID ={this.state.roomID}/>}
+            </Box> : <SongQueue queue = {this.state.queue} roomID ={this.state.roomID} userId={this.props.userId} />}
             <Chat messages={this.props.chat} roomID={this.state.roomID} />
             
                 </Box>

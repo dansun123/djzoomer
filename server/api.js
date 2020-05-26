@@ -149,7 +149,10 @@ router.get("/songs", auth.ensureLoggedIn, (req, res) => {
     Song.find({}).then((songs) => {
       let listOfSongs = []
       songs.forEach((song) => {
-        listOfSongs.push({title: song.title, primaryArtist: song.primaryArtist, songID: song._id, difficulty: song.answerKey.length})
+        let highScore = 0 
+        let arr = song.highScores.filter((entry) => {return entry.userId === req.user._id})
+        if(arr.length > 0) highScore = arr[0].score 
+        listOfSongs.push({title: song.title, primaryArtist: song.primaryArtist, songID: song._id, difficulty: song.answerKey.length, highScore: highScore})
         if(listOfSongs.length === songs.length) {
           res.send(listOfSongs.sort((a, b) => {
             return a.difficulty - b.difficulty
@@ -306,13 +309,36 @@ router.post("/startGame", auth.ensureLoggedIn, (req, res) => {
                     }, 3000)
                     setTimeout(() => {
                       Game.findById(game._id).then((newGame) => {
-                        newGame.status = "finished"
+
+                        Song.findOne(parameter).then((song) => {
+                          let curhighscores = song.highScores
+                          let curgameData = newGame.gameData 
+                          let i=0
+                          let j=0
+                          
+                            for(j=0; j<curgameData.length; j++) {
+                              let checked = false 
+                              for(i=0; i<curhighscores.length; i++) {
+                               if(curhighscores[i].userId === curgameData[j].userId) {
+                                 checked = true 
+                                  if(curhighscores[i].score < curgameData[j].score) {
+                                    curhighscores[i] = curgameData[j]
+                                  }
+                                }
+                            }
+                            if(!checked) curhighscores.push(curgameData[j])
+                          }
+                          song.highScores = curhighscores
+                          song.markModified("highScores")
+                          song.save().then(() => {
+
+                          newGame.status = "finished"
                         let finishedGameData = newGame.gameData
                         let lyrics = newGame.answerKey
                         lyrics = lyrics.split(" ")
                         finishedGameData.push({userId: "0", userName: "Lyrics", score: 100, lyrics: lyrics, mode: "Typing"})
                         newGame.save().then(()=> {
-                          socket.getIo().emit("finished", {roomID: req.body.roomID, gameID: game._id, gameData: finishedGameData})
+                          socket.getIo().emit("finished", {roomID: req.body.roomID, gameID: game._id, gameData: finishedGameData, highScores: curhighscores})
                        
                           finishedGameData.forEach((obj) => {
                             if(obj.userId === "0") return;
@@ -321,7 +347,7 @@ router.post("/startGame", auth.ensureLoggedIn, (req, res) => {
                               if(obj.lyrics.length > 0) 
                                 activeuser.inactivityCount = 0
                               else {
-                                if(curcount >= 2) {
+                                if(curcount >= 200) {
                                   socket.getIo().emit("inactive", {userId: obj.userId})
                                   activeuser.roomID = "Lobby"
                                   let message = new Message({
@@ -344,7 +370,10 @@ router.post("/startGame", auth.ensureLoggedIn, (req, res) => {
                           })
                        
                         })
-    
+                        })
+
+                        
+                      })
     
                       })
                     }, 33000)

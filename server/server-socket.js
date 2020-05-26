@@ -1,5 +1,7 @@
 let io;
 
+const User = require("./models/user");
+const Message = require("./models/message");
 const userToSocketMap = {}; // maps user ID to socket object
 const socketToUserMap = {}; // maps socket ID to user object
 
@@ -32,9 +34,30 @@ module.exports = {
     io.on("connection", (socket) => {
       console.log(`socket has connected ${socket.id}`);
       socket.on("disconnect", (reason) => {
+        console.log("disconnect")
         const user = getUserFromSocketID(socket.id);
+
         removeUser(user, socket);
+        if(user) {
+        User.findById(user._id).then((activeuser) => {
+            
+              io.emit("inactive", {userId: user._id})
+              let roomID = activeuser.roomID
+              let message = new Message({
+                sender: {userId: user._id, userName: activeuser.userName},
+                roomID: roomID, 
+                message: activeuser.userName + " left the Room",
+                systemMessage: true
+              })
+              io.emit("newMessage", message)
+              activeuser.roomID = "Lobby"
+              activeuser.inactivityCount = 0
+           
+          activeuser.save()
+            })
+          }
       });
+      
     });
   },
 
